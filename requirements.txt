@@ -1,0 +1,6 @@
+streamlit>=1.31.0
+crewai>=0.11.0
+crewai-tools>=0.0.10
+pysqlite3-binary>=0.5.2
+anthropic>=0.8.0
+pyarrow>=15.0.0
