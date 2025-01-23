@@ -161,19 +161,31 @@ class HiringAnalyticsCrew:
     def _parse_results(self, crew_output: Any) -> Dict[str, Any]:
         """Parse and structure the crew's output for Streamlit compatibility."""
         try:
-            if hasattr(crew_output, 'model_dump'):
-                return crew_output.model_dump()
+            # Initialize empty lists for research and market analysis
+            research_data = []
+            market_data = []
+            
+            # Process each task result
+            for task_output in crew_output:
+                if isinstance(task_output, dict):
+                    output = task_output.get('output', '')
+                else:
+                    output = str(task_output)
+                
+                if 'Market Position' in output:
+                    market_data.append(output)
+                else:
+                    research_data.append(output)
+            
             return {
                 'tasks_output': [
                     {
                         'task': 'Research',
-                        'raw': crew_output.get('Financial Metrics', '') + '\n' + 
-                              crew_output.get('Hiring Metrics', '') + '\n' +
-                              crew_output.get('Growth Indicators', '')
+                        'raw': '\n'.join(research_data)
                     },
                     {
                         'task': 'Market Analysis',
-                        'raw': crew_output.get('Market Position', '')
+                        'raw': '\n'.join(market_data)
                     }
                 ]
             }
