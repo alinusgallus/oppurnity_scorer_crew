@@ -161,31 +161,47 @@ class HiringAnalyticsCrew:
     def _parse_results(self, crew_output: Any) -> Dict[str, Any]:
         """Parse and structure the crew's output for Streamlit compatibility."""
         try:
-            # Initialize empty lists for research and market analysis
             research_data = []
             market_data = []
             
-            # Process each task result
-            for task_output in crew_output:
-                if isinstance(task_output, dict):
-                    output = task_output.get('output', '')
+            if isinstance(crew_output, dict) and 'tasks_output' in crew_output:
+                task_outputs = crew_output['tasks_output']
+            else:
+                task_outputs = crew_output
+            
+            for task_output in task_outputs:
+                # Extract the raw content from the task output
+                if hasattr(task_output, 'raw'):
+                    content = task_output.raw
+                elif isinstance(task_output, dict):
+                    content = task_output.get('raw', '')
                 else:
-                    output = str(task_output)
+                    content = str(task_output)
                 
-                if 'Market Position' in output:
-                    market_data.append(output)
+                # Skip empty or irrelevant content
+                if not content or content.startswith(('(', 'Task')):
+                    continue
+                
+                # Categorize the content
+                if 'Market Position' in content:
+                    market_data.append(content)
                 else:
-                    research_data.append(output)
+                    if content.startswith(('Financial Metrics', 'Hiring Metrics', 'Growth Indicators')):
+                        research_data.append(content)
+            
+            # Clean up the data by removing empty lines and extra whitespace
+            research_text = '\n'.join(line.strip() for line in research_data if line.strip())
+            market_text = '\n'.join(line.strip() for line in market_data if line.strip())
             
             return {
                 'tasks_output': [
                     {
                         'task': 'Research',
-                        'raw': '\n'.join(research_data)
+                        'raw': research_text
                     },
                     {
                         'task': 'Market Analysis',
-                        'raw': '\n'.join(market_data)
+                        'raw': market_text
                     }
                 ]
             }
