@@ -9,6 +9,8 @@ import os
 from typing import Dict, Any, List
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai_tools import SerperDevTool
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 class HiringAnalyticsCrew:
     def __init__(self, anthropic_api_key: str, serper_api_key: str):
@@ -69,78 +71,55 @@ class HiringAnalyticsCrew:
         return [financial_agent, jobs_agent, growth_agent, market_agent]
     
     def create_tasks(self, company_name: str) -> List[Task]:
+        """Create more concise tasks to reduce token usage"""
         financial_task = Task(
-            description=f"""Analyze {company_name}'s financial health:
-            1. Find latest quarterly revenue and profits
-            2. Calculate burn rate if available
-            3. Identify recent funding events
-            4. Assess cash reserves
-            
-            Format output as:
-            Financial Metrics:
-            - Revenue: [Latest quarterly]
-            - Profit Margins: [%]
-            - Burn Rate: [If applicable]
-            - Recent Funding: [Date, Amount]
-            - Cash Position: [Latest figure]""",
+            description=f"""Research {company_name}'s financial metrics:
+            - Revenue
+            - Profit margins
+            - Funding/cash position
+            Format: Financial Metrics: revenue, margins, funding""",
             agent=self.agents[0],
-            expected_output="A structured analysis of the company's financial metrics including revenue, profits, burn rate, funding, and cash position."
+            expected_output="Financial metrics analysis"
         )
         
         jobs_task = Task(
-            description=f"""Analyze {company_name}'s hiring patterns:
-            1. Count current job openings
-            2. Identify most frequent roles
-            3. Track department growth
-            4. Note any hiring freezes/slowdowns
-            
-            Format output as:
-            Hiring Metrics:
-            - Active Openings: [Number]
-            - Key Departments: [List]
-            - Growth Areas: [Departments]
-            - Hiring Velocity: [Trend]""",
+            description=f"""Analyze {company_name}'s hiring:
+            - Current openings
+            - Key departments
+            - Growth areas
+            Format: Hiring Metrics: openings, departments, growth""",
             agent=self.agents[1],
-            expected_output="A detailed analysis of the company's hiring patterns including job openings, key departments, and hiring trends."
+            expected_output="Hiring patterns analysis"
         )
         
         growth_task = Task(
-            description=f"""Analyze {company_name}'s growth indicators:
-            1. Track LinkedIn employee growth
-            2. Monitor office locations
-            3. Identify new products/services
-            4. Note expansion plans
-            
-            Format output as:
-            Growth Indicators:
-            - Employee Growth: [Rate]
-            - Locations: [Changes]
-            - Products: [New launches]
-            - Expansion: [Plans]""",
+            description=f"""Check {company_name}'s growth:
+            - Employee growth
+            - Locations
+            - New products
+            Format: Growth Indicators: employees, locations, products""",
             agent=self.agents[2],
-            expected_output="A comprehensive analysis of company growth indicators including employee growth, locations, products, and expansion plans."
+            expected_output="Growth indicators analysis"
         )
         
         market_task = Task(
-            description=f"""Analyze {company_name}'s market position:
-            1. Compare with competitors
-            2. Assess market share
-            3. Track industry trends
-            4. Identify market challenges
-            
-            Format output as:
-            Market Position:
-            - Competitors: [Key rivals]
-            - Market Share: [Estimate]
-            - Industry Trends: [Key movements]
-            - Challenges: [Main obstacles]""",
+            description=f"""Assess {company_name}'s market:
+            - Competitors
+            - Market share
+            - Industry trends
+            Format: Market Position: competitors, share, trends""",
             agent=self.agents[3],
-            expected_output="A detailed analysis of the company's market position including competitors, market share, trends, and challenges.",
+            expected_output="Market position analysis",
             context=[financial_task, jobs_task, growth_task]
         )
         
         return [financial_task, jobs_task, growth_task, market_task]
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        reraise=True
+    )
     def analyze_company(self, company_name: str) -> Dict[str, Any]:
         """Run full company analysis with the AI crew."""
         try:
@@ -152,10 +131,16 @@ class HiringAnalyticsCrew:
                 manager_llm=self.llm
             )
             
+            # Add delay between API calls to avoid rate limits
+            time.sleep(2)
             result = crew.kickoff()
             return self._parse_results(result)
             
         except Exception as e:
+            if "rate_limit" in str(e).lower():
+                # Wait longer if we hit rate limits
+                time.sleep(5)
+                raise  # Retry through decorator
             raise Exception(f"Error analyzing company: {str(e)}")
     
     def _parse_results(self, crew_output: Any) -> Dict[str, Any]:
