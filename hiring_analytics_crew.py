@@ -148,7 +148,8 @@ class HiringAnalyticsCrew:
                 agents=self.agents,
                 tasks=self.create_tasks(company_name),
                 process=Process.hierarchical,
-                verbose=True
+                verbose=True,
+                manager_llm=self.llm
             )
             
             result = crew.kickoff()
