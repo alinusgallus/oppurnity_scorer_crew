@@ -4,3 +4,4 @@ crewai-tools>=0.0.10
 pysqlite3-binary>=0.5.2
 anthropic>=0.8.0
 pyarrow>=15.0.0
+tornado>=6.3.3
