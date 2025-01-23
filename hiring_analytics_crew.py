@@ -83,7 +83,8 @@ class HiringAnalyticsCrew:
             - Burn Rate: [If applicable]
             - Recent Funding: [Date, Amount]
             - Cash Position: [Latest figure]""",
-            agent=self.agents[0]
+            agent=self.agents[0],
+            expected_output="A structured analysis of the company's financial metrics including revenue, profits, burn rate, funding, and cash position."
         )
         
         jobs_task = Task(
@@ -99,7 +100,8 @@ class HiringAnalyticsCrew:
             - Key Departments: [List]
             - Growth Areas: [Departments]
             - Hiring Velocity: [Trend]""",
-            agent=self.agents[1]
+            agent=self.agents[1],
+            expected_output="A detailed analysis of the company's hiring patterns including job openings, key departments, and hiring trends."
         )
         
         growth_task = Task(
@@ -115,7 +117,8 @@ class HiringAnalyticsCrew:
             - Locations: [Changes]
             - Products: [New launches]
             - Expansion: [Plans]""",
-            agent=self.agents[2]
+            agent=self.agents[2],
+            expected_output="A comprehensive analysis of company growth indicators including employee growth, locations, products, and expansion plans."
         )
         
         market_task = Task(
@@ -132,6 +135,7 @@ class HiringAnalyticsCrew:
             - Industry Trends: [Key movements]
             - Challenges: [Main obstacles]""",
             agent=self.agents[3],
+            expected_output="A detailed analysis of the company's market position including competitors, market share, trends, and challenges.",
             context=[financial_task, jobs_task, growth_task]
         )
         
