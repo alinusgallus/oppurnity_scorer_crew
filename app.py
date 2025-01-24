@@ -20,6 +20,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+def format_section(section_text: str) -> str:
+    """Helper function to format section text with proper indentation and bullets"""
+    if section_text.startswith('-'):
+        return f"• {section_text[1:].strip()}"
+    return section_text.strip()
+
 def main():
     st.title("Company Hiring Analytics 📊")
     
@@ -60,33 +66,49 @@ def main():
                         market_data = next((task for task in results['tasks_output'] 
                                          if task['task'] == 'Market Analysis'), None)
                         if market_data and market_data.get('raw'):
-                            # Split into two columns
                             col1, col2 = st.columns(2)
                             
+                            sections = market_data['raw'].split('\n')
+                            market_sections = {'competitors': [], 'share': [], 'trends': [], 'challenges': []}
+                            current_section = None
+                            
+                            # Categorize market data
+                            for section in sections:
+                                if not section.strip():
+                                    continue
+                                if 'Competitors:' in section:
+                                    current_section = 'competitors'
+                                elif 'Market Share:' in section:
+                                    current_section = 'share'
+                                elif 'Industry Trends:' in section:
+                                    current_section = 'trends'
+                                elif 'Challenges:' in section:
+                                    current_section = 'challenges'
+                                elif current_section and section.strip():
+                                    market_sections[current_section].append(format_section(section))
+                            
+                            # Display market data
                             with col1:
-                                st.subheader("Market Position")
-                                # Display competitors and market share
-                                sections = market_data['raw'].split('\n')
-                                for section in sections:
-                                    if section.strip():
-                                        if 'Competitors:' in section:
-                                            st.markdown("#### Key Competitors")
-                                        elif 'Market Share:' in section:
-                                            st.markdown("#### Market Share")
-                                        if section.startswith('-'):
-                                            st.markdown(section)
+                                st.markdown("### 🎯 Market Position")
+                                if market_sections['competitors']:
+                                    st.markdown("#### Key Competitors")
+                                    for comp in market_sections['competitors']:
+                                        st.markdown(comp)
+                                if market_sections['share']:
+                                    st.markdown("#### 📊 Market Share")
+                                    for share in market_sections['share']:
+                                        st.markdown(share)
                             
                             with col2:
-                                st.subheader("Industry Insights")
-                                # Display trends and challenges
-                                for section in sections:
-                                    if section.strip():
-                                        if 'Industry Trends:' in section:
-                                            st.markdown("#### Trends")
-                                        elif 'Challenges:' in section:
-                                            st.markdown("#### Challenges")
-                                        if section.startswith('-'):
-                                            st.markdown(section)
+                                st.markdown("### 📈 Industry Insights")
+                                if market_sections['trends']:
+                                    st.markdown("#### Key Trends")
+                                    for trend in market_sections['trends']:
+                                        st.markdown(trend)
+                                if market_sections['challenges']:
+                                    st.markdown("#### 🚧 Challenges")
+                                    for challenge in market_sections['challenges']:
+                                        st.markdown(challenge)
                     
                     # Company Analysis Tab
                     with company_tab:
@@ -94,26 +116,45 @@ def main():
                                            if task['task'] == 'Research'), None)
                         if research_data and research_data.get('raw'):
                             sections = research_data['raw'].split('\n')
+                            company_sections = {
+                                'financial': [], 'growth': [], 'hiring': []
+                            }
+                            current_section = None
                             
-                            # Create metrics cards for financial and growth data
-                            st.subheader("Company Performance")
+                            # Categorize company data
+                            for section in sections:
+                                if not section.strip():
+                                    continue
+                                if 'Financial Metrics:' in section:
+                                    current_section = 'financial'
+                                elif 'Growth Indicators:' in section:
+                                    current_section = 'growth'
+                                elif 'Hiring Metrics:' in section:
+                                    current_section = 'hiring'
+                                elif current_section and section.strip():
+                                    company_sections[current_section].append(format_section(section))
+                            
+                            # Display company metrics
+                            st.markdown("### 📊 Company Performance")
                             metrics_cols = st.columns(2)
                             
                             with metrics_cols[0]:
-                                st.markdown("#### Financial Metrics")
-                                for section in sections:
-                                    if section.strip() and ('Revenue:' in section or 
-                                                          'Profit Margins:' in section or 
-                                                          'Cash Position:' in section):
-                                        st.markdown(section)
+                                st.markdown("#### 💰 Financial Overview")
+                                for metric in company_sections['financial']:
+                                    st.markdown(f"""
+                                    <div class="metric-card">
+                                        <div class="metric-value">{metric}</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
                             
                             with metrics_cols[1]:
-                                st.markdown("#### Growth Indicators")
-                                for section in sections:
-                                    if section.strip() and ('Employee Growth:' in section or 
-                                                          'Locations:' in section or 
-                                                          'Products:' in section):
-                                        st.markdown(section)
+                                st.markdown("#### 📈 Growth Metrics")
+                                for metric in company_sections['growth']:
+                                    st.markdown(f"""
+                                    <div class="metric-card">
+                                        <div class="metric-value">{metric}</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
                     
                     # Hiring Analysis Tab
                     with hiring_tab:
