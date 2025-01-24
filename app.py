@@ -8,7 +8,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from oppurnity_scorer_crew.hiring_analytics_crew import HiringAnalyticsCrew
-from crewai.cache import Cache
+from oppurnity_scorer_crew.hiring_analytics_crew import Cache
 
 st.set_page_config(
     page_title="Company Hiring Analytics",
