@@ -13,10 +13,12 @@ import time
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 class HiringAnalyticsCrew:
-    def __init__(self, anthropic_api_key: str, serper_api_key: str):
-        self.llm = LLM(api_key=anthropic_api_key, model="anthropic/claude-3-sonnet-20240229")
-        self.tools = self._create_tools(serper_api_key)
-        self.agents = self._create_agents()
+    def __init__(self, anthropic_api_key: str, serper_api_key: str, test_mode: bool = False):
+        self.test_mode = test_mode
+        if not test_mode:
+            self.llm = LLM(api_key=anthropic_api_key, model="anthropic/claude-3-sonnet-20240229")
+            self.tools = self._create_tools(serper_api_key)
+            self.agents = self._create_agents()
         
     def _create_tools(self, serper_api_key: str) -> Dict[str, Any]:
         return {
@@ -122,6 +124,9 @@ class HiringAnalyticsCrew:
     )
     def analyze_company(self, company_name: str) -> Dict[str, Any]:
         """Run full company analysis with the AI crew."""
+        if self.test_mode:
+            return self._get_mock_results(company_name)
+        
         try:
             crew = Crew(
                 agents=self.agents,
@@ -152,46 +157,104 @@ class HiringAnalyticsCrew:
             research_data = []
             market_data = []
             
-            if isinstance(crew_output, dict) and 'tasks_output' in crew_output:
+            # Handle different output formats
+            if isinstance(crew_output, list):
+                task_outputs = crew_output
+            elif isinstance(crew_output, dict) and 'tasks_output' in crew_output:
                 task_outputs = crew_output['tasks_output']
             else:
-                task_outputs = crew_output
+                task_outputs = [crew_output]
             
             for task_output in task_outputs:
-                # Extract the raw content from the task output
-                if hasattr(task_output, 'raw'):
+                # Extract the output content
+                if hasattr(task_output, 'output'):
+                    content = task_output.output
+                elif hasattr(task_output, 'raw'):
                     content = task_output.raw
                 elif isinstance(task_output, dict):
-                    content = task_output.get('raw', '')
+                    content = task_output.get('output', task_output.get('raw', ''))
                 else:
                     content = str(task_output)
                 
-                # Skip empty or irrelevant content
-                if not content or content.startswith(('(', 'Task')):
+                # Skip metadata and empty content
+                if not content or any(skip in content.lower() for skip in ['pydantic', 'json_dict', 'token_usage']):
                     continue
                 
                 # Categorize the content
-                if 'Market Position' in content:
+                if any(market_term in content for market_term in ['Market Position', 'Competitors', 'Market Share']):
                     market_data.append(content)
-                else:
-                    if content.startswith(('Financial Metrics', 'Hiring Metrics', 'Growth Indicators')):
-                        research_data.append(content)
+                elif any(metric in content for metric in ['Financial Metrics', 'Hiring Metrics', 'Growth Indicators']):
+                    research_data.append(content)
             
-            # Clean up the data by removing empty lines and extra whitespace
-            research_text = '\n'.join(line.strip() for line in research_data if line.strip())
-            market_text = '\n'.join(line.strip() for line in market_data if line.strip())
+            # Clean up the data
+            def clean_text(text_list):
+                cleaned = []
+                for text in text_list:
+                    # Remove metadata-like lines
+                    lines = [line.strip() for line in text.split('\n') 
+                            if line.strip() and not line.strip().startswith(('(', 'Task', 'pydantic'))]
+                    cleaned.extend(lines)
+                return '\n'.join(cleaned)
             
             return {
                 'tasks_output': [
                     {
                         'task': 'Research',
-                        'raw': research_text
+                        'raw': clean_text(research_data)
                     },
                     {
                         'task': 'Market Analysis',
-                        'raw': market_text
+                        'raw': clean_text(market_data)
                     }
                 ]
             }
         except Exception as e:
             raise Exception(f"Error parsing results: {str(e)}")
+
+    def _get_mock_results(self, company_name: str) -> Dict[str, Any]:
+        """Return mock data for testing."""
+        return {
+            'tasks_output': [
+                {
+                    'task': 'Research',
+                    'raw': f"""Financial Metrics:
+- Revenue: $500M annual (estimated)
+- Profit Margins: 15-20%
+- Recent Funding: Series C, $100M (2023)
+- Cash Position: Strong, with significant reserves
+
+Hiring Metrics:
+- Active Openings: 45 positions
+- Key Departments: Engineering, Sales, Operations
+- Growth Areas: Data Science, Cloud Infrastructure
+- Hiring Velocity: Steady increase
+
+Growth Indicators:
+- Employee Growth: 25% YoY
+- Locations: 5 global offices
+- Products: 3 new launches in 2023
+- Expansion: APAC market entry planned"""
+                },
+                {
+                    'task': 'Market Analysis',
+                    'raw': f"""Market Position:
+- Competitors: 
+  - Major Player A (30% market share)
+  - Challenger B (15% market share)
+  - {company_name} (10% market share)
+
+- Industry Trends:
+  - Digital transformation acceleration
+  - AI/ML integration
+  - Sustainability focus
+
+- Market Share: 10% in primary market
+- Growth Rate: 15% annually
+
+- Challenges:
+  - Intense competition
+  - Talent acquisition
+  - Technology adaptation"""
+                }
+            ]
+        }

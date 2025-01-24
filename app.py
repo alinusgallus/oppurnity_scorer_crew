@@ -23,6 +23,12 @@ st.markdown("""
 def main():
     st.title("Company Hiring Analytics 📊")
     
+    # Add test mode toggle in sidebar
+    with st.sidebar:
+        test_mode = st.toggle("Test Mode (No API calls)", value=False)
+        if test_mode:
+            st.info("🧪 Running in test mode - using mock data")
+    
     # Company input
     company_name = st.text_input("Enter Company Name", placeholder="e.g., Microsoft")
     
@@ -32,10 +38,11 @@ def main():
             return
             
         try:
-            # Initialize crew
+            # Initialize crew with test mode
             crew = HiringAnalyticsCrew(
                 anthropic_api_key=st.secrets["ANTHROPIC_API_KEY"],
-                serper_api_key=st.secrets["SERPER_API_KEY"]
+                serper_api_key=st.secrets["SERPER_API_KEY"],
+                test_mode=test_mode
             )
             
             with st.spinner("Analyzing company data..."):
@@ -50,13 +57,16 @@ def main():
                         research_data = next((task for task in results['tasks_output'] 
                                            if task['task'] == 'Research'), None)
                         if research_data and research_data.get('raw'):
-                            # Split the research data into sections and display them
                             sections = research_data['raw'].split('\n')
+                            current_section = None
                             for section in sections:
                                 if section.strip():
-                                    # Remove bullet points if they exist
-                                    section = section.replace('•', '').strip()
-                                    if section:
+                                    if any(header in section for header in ['Metrics:', 'Indicators:']):
+                                        current_section = section.strip()
+                                        st.markdown(f"**{current_section}**")
+                                    elif section.startswith('-'):
+                                        st.markdown(section)
+                                    else:
                                         st.markdown(f"• {section}")
                     
                     # Market analysis
@@ -65,13 +75,16 @@ def main():
                         market_data = next((task for task in results['tasks_output'] 
                                          if task['task'] == 'Market Analysis'), None)
                         if market_data and market_data.get('raw'):
-                            # Split the market data into sections and display them
                             sections = market_data['raw'].split('\n')
+                            current_section = None
                             for section in sections:
                                 if section.strip():
-                                    # Remove bullet points if they exist
-                                    section = section.replace('•', '').strip()
-                                    if section:
+                                    if 'Market Position:' in section:
+                                        current_section = section.strip()
+                                        st.markdown(f"**{current_section}**")
+                                    elif section.startswith('-'):
+                                        st.markdown(section)
+                                    else:
                                         st.markdown(f"• {section}")
                     
                     # Hiring score
