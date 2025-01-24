@@ -137,11 +137,14 @@ class HiringAnalyticsCrew:
             return self._parse_results(result)
             
         except Exception as e:
-            if "rate_limit" in str(e).lower():
-                # Wait longer if we hit rate limits
+            error_message = str(e)
+            if "credit balance is too low" in error_message:
+                raise Exception("API credits depleted. Please check your Anthropic API account.")
+            elif "rate limit" in error_message.lower():
                 time.sleep(5)
                 raise  # Retry through decorator
-            raise Exception(f"Error analyzing company: {str(e)}")
+            else:
+                raise Exception(f"Error analyzing company: {error_message}")
     
     def _parse_results(self, crew_output: Any) -> Dict[str, Any]:
         """Parse and structure the crew's output for Streamlit compatibility."""

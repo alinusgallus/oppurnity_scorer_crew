@@ -94,7 +94,13 @@ def main():
                         st.warning(score_text)
                     
         except Exception as e:
-            st.error(f"Error analyzing company: {str(e)}")
+            error_message = str(e)
+            if "credit balance is too low" in error_message:
+                st.error("⚠️ API credits have been depleted. Please check your Anthropic API account and add more credits to continue using the service.")
+            elif "rate limit" in error_message.lower():
+                st.error("⚠️ Too many requests. Please wait a few minutes and try again.")
+            else:
+                st.error(f"Error analyzing company: {error_message}")
 
 if __name__ == "__main__":
     main()
