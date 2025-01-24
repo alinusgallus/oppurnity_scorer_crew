@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 from hiring_analytics_crew import HiringAnalyticsCrew
+from crewai.cache import Cache
 
 st.set_page_config(
     page_title="Company Hiring Analytics",
@@ -65,8 +66,12 @@ def main():
     # Sidebar configuration
     with st.sidebar:
         test_mode = st.toggle("Test Mode (No API calls)", value=False)
-        if test_mode:
-            st.info("🧪 Running in test mode - using mock data")
+        if not test_mode:
+            force_refresh = st.checkbox("Force refresh (ignore cache)", value=False)
+            if force_refresh:
+                Cache.disable()  # Temporarily disable cache
+            else:
+                Cache.enable()
     
     # Company input with validation
     col1, col2 = st.columns([3, 1])
@@ -83,8 +88,26 @@ def main():
                 test_mode=test_mode
             )
             
-            with st.spinner("🔍 " + ("Loading test data..." if test_mode else "Analyzing company data...")):
+            # Check if results are cached
+            cache_key = crew._generate_cache_key(company_name)
+            is_cached = not test_mode and Cache.get(cache_key) is not None
+            
+            with st.spinner("🔍 " + (
+                "Loading test data..." if test_mode 
+                else "Loading cached results..." if is_cached
+                else "Analyzing company data..."
+            )):
                 results = crew.analyze_company(company_name)
+                
+                if is_cached:
+                    cache_meta = crew._get_cache_metadata(cache_key)
+                    with st.expander("📂 Cache Information"):
+                        st.info(
+                            f"💾 Showing cached results\n"
+                            f"⏰ Last updated: {cache_meta.get('timestamp', 'unknown')}\n"
+                            f"👥 Cache hits: {cache_meta.get('hits', 0)}\n"
+                            f"⌛ TTL: {cache_meta.get('ttl', 0)/3600:.1f} hours"
+                        )
                 
                 if results and 'tasks_output' in results:
                     # Create three main tabs

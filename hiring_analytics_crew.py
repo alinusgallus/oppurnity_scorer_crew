@@ -11,11 +11,25 @@ from crewai import Agent, Task, Crew, Process, LLM
 from crewai_tools import SerperDevTool
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
+from crewai.cache import Cache
+import hashlib
+import json
+from datetime import datetime
 
 class HiringAnalyticsCrew:
     def __init__(self, anthropic_api_key: str, serper_api_key: str, test_mode: bool = False):
         self.test_mode = test_mode
         if not test_mode:
+            # Enable caching
+            Cache.enable()
+            # Configure cache settings
+            Cache.configure(
+                cache_type="filesystem",  # or "redis" if you prefer
+                cache_dir=".cache",       # Directory to store cache files
+                ttl=3600 * 12,            # Cache TTL in seconds (12 hours here)
+                prefix="company_analysis"
+            )
+            
             self.llm = LLM(api_key=anthropic_api_key, model="anthropic/claude-3-sonnet-20240229")
             self.tools = self._create_tools(serper_api_key)
             self.agents = self._create_agents()
@@ -140,6 +154,22 @@ class HiringAnalyticsCrew:
             return self._get_mock_results(company_name)
         
         try:
+            cache_key = self._generate_cache_key(company_name)
+            
+            try:
+                cached_result = Cache.get(cache_key)
+                if cached_result:
+                    # Update cache metadata
+                    metadata = self._get_cache_metadata(cache_key)
+                    Cache.set_metadata(cache_key, {
+                        **metadata,
+                        'hits': metadata.get('hits', 0) + 1
+                    })
+                    return self._parse_results(cached_result)
+            except Exception as cache_error:
+                st.warning(f"Cache error: {str(cache_error)}. Fetching fresh data.")
+            
+            # If no cache, run the analysis
             crew = Crew(
                 agents=self.agents,
                 tasks=self.create_tasks(company_name),
@@ -151,6 +181,18 @@ class HiringAnalyticsCrew:
             # Add delay between API calls to avoid rate limits
             time.sleep(2)
             result = crew.kickoff()
+            
+            # Cache with metadata
+            try:
+                Cache.set(cache_key, result)
+                Cache.set_metadata(cache_key, {
+                    'company': company_name,
+                    'timestamp': datetime.now().isoformat(),
+                    'hits': 1
+                })
+            except Exception as cache_error:
+                st.warning(f"Failed to cache results: {str(cache_error)}")
+            
             return self._parse_results(result)
             
         except Exception as e:
@@ -277,3 +319,30 @@ Challenges:
                 }
             ]
         }
+
+    def _generate_cache_key(self, company_name: str) -> str:
+        """Generate a unique cache key with improved versioning and metadata."""
+        cache_data = {
+            'company_name': company_name.lower(),
+            'tasks': [t.description for t in self.create_tasks(company_name)],
+            'version': '1.0',
+            'date': datetime.now().strftime('%Y%m%d'),
+            'config': {
+                'model': 'claude-3-sonnet-20240229',
+                'process': 'hierarchical'
+            }
+        }
+        cache_string = json.dumps(cache_data, sort_keys=True)
+        return f"company_analysis_{hashlib.md5(cache_string.encode()).hexdigest()}"
+
+    def _get_cache_metadata(self, cache_key: str) -> Dict[str, Any]:
+        """Get cache entry metadata."""
+        try:
+            metadata = Cache.get_metadata(cache_key) or {}
+            return {
+                'timestamp': metadata.get('timestamp', 'unknown'),
+                'ttl': metadata.get('ttl', 0),
+                'hits': metadata.get('hits', 0)
+            }
+        except Exception:
+            return {}
