@@ -232,8 +232,8 @@ class HiringAnalyticsCrew:
                     'raw': f"""Financial Metrics:
 - Revenue: $500M annual (estimated)
 - Profit Margins: 15-20%
-- Recent Funding: Series C, $100M (2023)
 - Cash Position: Strong, with significant reserves
+- Recent Funding: Series C, $100M (2023)
 
 Hiring Metrics:
 - Active Openings: 45 positions
@@ -243,30 +243,37 @@ Hiring Metrics:
 
 Growth Indicators:
 - Employee Growth: 25% YoY
-- Locations: 5 global offices
+- Locations: 5 global offices, expanding
 - Products: 3 new launches in 2023
 - Expansion: APAC market entry planned"""
                 },
                 {
                     'task': 'Market Analysis',
                     'raw': f"""Market Position:
-- Competitors: 
-  - Major Player A (30% market share)
-  - Challenger B (15% market share)
-  - {company_name} (10% market share)
+Competitors:
+- {company_name} (10% market share)
+- Industry Leader Corp (30% market share)
+- Global Solutions Inc (20% market share)
+- Regional Player Ltd (15% market share)
 
-- Industry Trends:
-  - Digital transformation acceleration
-  - AI/ML integration
-  - Sustainability focus
+Market Share:
+- 10% global market share
+- Strong regional presence
+- Growing in emerging markets
 
-- Market Share: 10% in primary market
-- Growth Rate: 15% annually
+Industry Trends:
+- Digital transformation acceleration
+- AI/ML integration in core operations
+- Sustainability initiatives
+- Remote workforce adoption
+- Supply chain optimization
 
-- Challenges:
-  - Intense competition
-  - Talent acquisition
-  - Technology adaptation"""
+Challenges:
+- Intense market competition
+- Talent acquisition in key areas
+- Technology adaptation costs
+- Regulatory compliance
+- Market volatility"""
                 }
             ]
         }
