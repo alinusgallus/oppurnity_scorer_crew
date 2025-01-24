@@ -23,25 +23,11 @@ st.markdown("""
 def main():
     st.title("Company Hiring Analytics 📊")
     
-    # Add test mode toggle and info in sidebar
+    # Sidebar configuration
     with st.sidebar:
         test_mode = st.toggle("Test Mode (No API calls)", value=False)
         if test_mode:
             st.info("🧪 Running in test mode - using mock data")
-            st.markdown("""
-            ℹ️ **Test Mode Info**
-            - No API credits used
-            - Instant results
-            - Standardized mock data
-            - Great for UI testing
-            """)
-        
-        # Add API usage info
-        if not test_mode:
-            st.markdown("### API Usage")
-            st.markdown("- Each analysis uses approximately:")
-            st.markdown("  - 4 agent tasks")
-            st.markdown("  - ~2000-3000 tokens")
     
     # Company input with validation
     col1, col2 = st.columns([3, 1])
@@ -52,7 +38,6 @@ def main():
     
     if analyze_button:
         try:
-            # Initialize crew with test mode
             crew = HiringAnalyticsCrew(
                 anthropic_api_key=st.secrets["ANTHROPIC_API_KEY"],
                 serper_api_key=st.secrets["SERPER_API_KEY"],
@@ -63,94 +48,116 @@ def main():
                 results = crew.analyze_company(company_name)
                 
                 if results and 'tasks_output' in results:
-                    # Create tabs for different sections
-                    analysis_tab, market_tab = st.tabs(["Company Analysis", "Market Position"])
+                    # Create three main tabs
+                    market_tab, company_tab, hiring_tab = st.tabs([
+                        "Market Overview", 
+                        "Company Analysis", 
+                        "Hiring Analysis"
+                    ])
                     
-                    # Company Analysis tab
-                    with analysis_tab:
-                        research_data = next((task for task in results['tasks_output'] 
-                                           if task['task'] == 'Research'), None)
-                        if research_data and research_data.get('raw'):
-                            sections = research_data['raw'].split('\n')
-                            current_section = None
-                            
-                            # Create columns for metrics
-                            metrics_cols = st.columns(3)
-                            col_idx = 0
-                            
-                            for section in sections:
-                                if section.strip():
-                                    if any(header in section for header in ['Metrics:', 'Indicators:']):
-                                        current_section = section.strip()
-                                        with metrics_cols[col_idx]:
-                                            st.markdown(f"### {current_section}")
-                                            col_idx = (col_idx + 1) % 3
-                                    elif section.startswith('-'):
-                                        with metrics_cols[col_idx - 1]:
-                                            st.markdown(section)
-                                    else:
-                                        with metrics_cols[col_idx - 1]:
-                                            st.markdown(f"• {section}")
-                    
-                    # Market Position tab
+                    # Market Overview Tab
                     with market_tab:
                         market_data = next((task for task in results['tasks_output'] 
                                          if task['task'] == 'Market Analysis'), None)
                         if market_data and market_data.get('raw'):
-                            sections = market_data['raw'].split('\n')
+                            # Split into two columns
+                            col1, col2 = st.columns(2)
                             
-                            # Create two columns for market data
-                            market_col1, market_col2 = st.columns(2)
-                            
-                            with market_col1:
-                                st.markdown("### Market Overview")
+                            with col1:
+                                st.subheader("Market Position")
+                                # Display competitors and market share
+                                sections = market_data['raw'].split('\n')
                                 for section in sections:
                                     if section.strip():
-                                        if 'Competitors:' in section or 'Market Share:' in section:
-                                            st.markdown(f"**{section.strip()}**")
-                                        elif section.startswith('-'):
+                                        if 'Competitors:' in section:
+                                            st.markdown("#### Key Competitors")
+                                        elif 'Market Share:' in section:
+                                            st.markdown("#### Market Share")
+                                        if section.startswith('-'):
                                             st.markdown(section)
                             
-                            with market_col2:
-                                st.markdown("### Industry Analysis")
+                            with col2:
+                                st.subheader("Industry Insights")
+                                # Display trends and challenges
                                 for section in sections:
                                     if section.strip():
-                                        if 'Industry Trends:' in section or 'Challenges:' in section:
-                                            st.markdown(f"**{section.strip()}**")
-                                        elif section.startswith('-'):
+                                        if 'Industry Trends:' in section:
+                                            st.markdown("#### Trends")
+                                        elif 'Challenges:' in section:
+                                            st.markdown("#### Challenges")
+                                        if section.startswith('-'):
                                             st.markdown(section)
                     
-                    # Hiring score (below tabs)
-                    st.markdown("---")
-                    score_col1, score_col2 = st.columns([1, 2])
-                    with score_col1:
-                        st.subheader("Hiring Potential Score")
-                        hiring_potential = "High"
+                    # Company Analysis Tab
+                    with company_tab:
+                        research_data = next((task for task in results['tasks_output'] 
+                                           if task['task'] == 'Research'), None)
                         if research_data and research_data.get('raw'):
-                            content = research_data['raw'].lower()
-                            if 'hiring freeze' in content or 'layoff' in content:
-                                hiring_potential = "Low"
-                            elif 'moderate' in content or 'stable' in content:
-                                hiring_potential = "Moderate"
-                        
-                        score_text = f"{hiring_potential} hiring potential"
-                        if hiring_potential == "High":
-                            st.success(score_text)
-                        elif hiring_potential == "Moderate":
-                            st.info(score_text)
-                        else:
-                            st.warning(score_text)
+                            sections = research_data['raw'].split('\n')
+                            
+                            # Create metrics cards for financial and growth data
+                            st.subheader("Company Performance")
+                            metrics_cols = st.columns(2)
+                            
+                            with metrics_cols[0]:
+                                st.markdown("#### Financial Metrics")
+                                for section in sections:
+                                    if section.strip() and ('Revenue:' in section or 
+                                                          'Profit Margins:' in section or 
+                                                          'Cash Position:' in section):
+                                        st.markdown(section)
+                            
+                            with metrics_cols[1]:
+                                st.markdown("#### Growth Indicators")
+                                for section in sections:
+                                    if section.strip() and ('Employee Growth:' in section or 
+                                                          'Locations:' in section or 
+                                                          'Products:' in section):
+                                        st.markdown(section)
                     
-                    with score_col2:
-                        st.markdown("### Key Factors")
-                        st.markdown("• " + ("Active hiring across multiple departments" if hiring_potential == "High" 
-                                          else "Stable hiring with some growth" if hiring_potential == "Moderate"
-                                          else "Limited hiring opportunities"))
+                    # Hiring Analysis Tab
+                    with hiring_tab:
+                        if research_data and research_data.get('raw'):
+                            st.subheader("Hiring Overview")
+                            
+                            # Create columns for hiring metrics
+                            col1, col2 = st.columns([2, 1])
+                            
+                            with col1:
+                                st.markdown("#### Current Hiring Status")
+                                for section in sections:
+                                    if section.strip() and ('Active Openings:' in section or 
+                                                          'Key Departments:' in section or 
+                                                          'Growth Areas:' in section):
+                                        st.markdown(section)
+                            
+                            with col2:
+                                st.markdown("#### Hiring Potential")
+                                # Determine hiring potential
+                                content = research_data['raw'].lower()
+                                if 'hiring freeze' in content or 'layoff' in content:
+                                    potential = "Low"
+                                    color = "🔴"
+                                elif 'moderate' in content or 'stable' in content:
+                                    potential = "Moderate"
+                                    color = "🟡"
+                                else:
+                                    potential = "High"
+                                    color = "🟢"
+                                
+                                st.markdown(f"### {color} {potential}")
+                                st.markdown("#### Key Factors")
+                                factors = {
+                                    "High": "Active hiring across departments with strong growth indicators",
+                                    "Moderate": "Stable hiring with selective growth",
+                                    "Low": "Limited hiring with potential challenges"
+                                }
+                                st.markdown(f"• {factors[potential]}")
                     
         except Exception as e:
             error_message = str(e)
             if "credit balance is too low" in error_message:
-                st.error("⚠️ API credits have been depleted. Please check your Anthropic API account and add more credits to continue using the service.")
+                st.error("⚠️ API credits depleted. Please check your Anthropic API account.")
             elif "rate limit" in error_message.lower():
                 st.error("⚠️ Too many requests. Please wait a few minutes and try again.")
             else:
