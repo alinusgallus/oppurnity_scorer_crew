@@ -59,15 +59,19 @@ class HiringAnalyticsCrew:
             verbose=True
         )
         
-        # Market Position Researcher
+        # Updated Market Position Researcher
         market_agent = Agent(
             role="Market Intelligence Specialist",
             goal="Assess company's market position and competitive landscape",
-            backstory="""Market research expert focused on competitive analysis,
-            industry trends, and market positioning strategies.""",
+            backstory="""Expert market researcher with deep experience in competitive analysis 
+            and industry trends. Specializes in analyzing market positions, identifying key 
+            competitors, and evaluating industry dynamics through public data sources.""",
             tools=[self.tools["search"]],
             llm=self.llm,
-            verbose=True
+            allow_delegation=True,  # Allow agent to delegate tasks if needed
+            max_iterations=3,  # Limit iterations to prevent infinite loops
+            verbose=True,
+            max_rpm=10  # Rate limit for API calls
         )
         
         return [financial_agent, jobs_agent, growth_agent, market_agent]
@@ -104,14 +108,22 @@ class HiringAnalyticsCrew:
             expected_output="Growth indicators analysis"
         )
         
+        # Updated market analysis task
         market_task = Task(
-            description=f"""Assess {company_name}'s market:
-            - Competitors
-            - Market share
-            - Industry trends
-            Format: Market Position: competitors, share, trends""",
+            description=f"""Research and analyze {company_name}'s market position:
+            1. Identify and analyze top 3-5 direct competitors
+            2. Estimate market share and relative position
+            3. List key industry trends affecting the company
+            4. Highlight major market challenges and opportunities
+            
+            Format output EXACTLY as follows:
+            Market Position:
+            - Competitors: [List with market share if available]
+            - Market Share: [Company's estimated share]
+            - Industry Trends: [Key trends]
+            - Challenges: [Main challenges]""",
             agent=self.agents[3],
-            expected_output="Market position analysis",
+            expected_output="Structured market analysis with competitors, share, trends, and challenges",
             context=[financial_task, jobs_task, growth_task]
         )
         
