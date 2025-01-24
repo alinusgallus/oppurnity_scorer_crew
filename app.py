@@ -49,27 +49,49 @@ def main():
                         st.subheader("Company Analysis")
                         research_data = next((task for task in results['tasks_output'] 
                                            if task['task'] == 'Research'), None)
-                        if research_data:
-                            metrics = research_data['raw'].split('\n')
-                            for metric in metrics:
-                                if metric.strip():
-                                    st.markdown(f"• {metric.strip()}")
+                        if research_data and research_data.get('raw'):
+                            # Split the research data into sections and display them
+                            sections = research_data['raw'].split('\n')
+                            for section in sections:
+                                if section.strip():
+                                    # Remove bullet points if they exist
+                                    section = section.replace('•', '').strip()
+                                    if section:
+                                        st.markdown(f"• {section}")
                     
                     # Market analysis
                     with col2:
                         st.subheader("Market Position")
                         market_data = next((task for task in results['tasks_output'] 
                                          if task['task'] == 'Market Analysis'), None)
-                        if market_data:
-                            metrics = market_data['raw'].split('\n')
-                            for metric in metrics:
-                                if metric.strip():
-                                    st.markdown(f"• {metric.strip()}")
+                        if market_data and market_data.get('raw'):
+                            # Split the market data into sections and display them
+                            sections = market_data['raw'].split('\n')
+                            for section in sections:
+                                if section.strip():
+                                    # Remove bullet points if they exist
+                                    section = section.replace('•', '').strip()
+                                    if section:
+                                        st.markdown(f"• {section}")
                     
                     # Hiring score
                     st.subheader("Hiring Potential Score")
-                    score_text = "High hiring potential" if "hiring" in results['tasks_output'][0]['raw'].lower() else "Moderate hiring potential"
-                    st.info(score_text)
+                    # Analyze the content to determine hiring potential
+                    hiring_potential = "High"
+                    if research_data and research_data.get('raw'):
+                        content = research_data['raw'].lower()
+                        if 'hiring freeze' in content or 'layoff' in content:
+                            hiring_potential = "Low"
+                        elif 'moderate' in content or 'stable' in content:
+                            hiring_potential = "Moderate"
+                        
+                    score_text = f"{hiring_potential} hiring potential"
+                    if hiring_potential == "High":
+                        st.success(score_text)
+                    elif hiring_potential == "Moderate":
+                        st.info(score_text)
+                    else:
+                        st.warning(score_text)
                     
         except Exception as e:
             st.error(f"Error analyzing company: {str(e)}")
