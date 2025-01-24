@@ -1,6 +1,13 @@
 import streamlit as st
 import os
-from hiring_analytics_crew import HiringAnalyticsCrew
+import sys
+from pathlib import Path
+
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
+
+from oppurnity_scorer_crew.hiring_analytics_crew import HiringAnalyticsCrew
 from crewai.cache import Cache
 
 st.set_page_config(
