@@ -11,7 +11,36 @@ from crewai import Agent, Task, Crew, Process, LLM
 from crewai_tools import SerperDevTool
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
-from crewai.cache import Cache
+try:
+    from crewai.cache import Cache
+except ImportError:
+    # Fallback to a simple cache implementation
+    class Cache:
+        _cache = {}
+        
+        @staticmethod
+        def enable():
+            pass
+            
+        @staticmethod
+        def configure(**kwargs):
+            pass
+            
+        @staticmethod
+        def get(key):
+            return Cache._cache.get(key)
+            
+        @staticmethod
+        def set(key, value):
+            Cache._cache[key] = value
+            
+        @staticmethod
+        def get_metadata(key):
+            return {}
+            
+        @staticmethod
+        def set_metadata(key, value):
+            pass
 import hashlib
 import json
 from datetime import datetime
